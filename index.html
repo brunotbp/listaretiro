@@ -20,8 +20,8 @@
     <label class="block text-sm font-medium mb-1">Nome:</label>
     <input id="nome" type="text" class="w-full p-2 border rounded mb-4 text-sm" placeholder="Seu nome completo">
 
-    <label class="block text-sm font-medium mb-1">CPF (chave PIX):</label>
-    <input id="cpf" type="text" class="w-full p-2 border rounded mb-4 text-sm" placeholder="000.000.000-00">
+    <label class="block text-sm font-medium mb-1">Telefone:</label>
+    <input id="telefone" type="text" maxlength="15" class="w-full p-2 border rounded mb-4 text-sm" placeholder="(00) 00000-0000" oninput="mascaraTelefone(this)">
 
     <button onclick="gerarQRCode()" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 text-sm font-semibold">
       Gerar QR Code PIX
@@ -45,36 +45,93 @@
   </div>
 
   <script>
-    async function gerarQRCode() {
-      const nome = document.getElementById('nome').value.trim();
-      const cpf = document.getElementById('cpf').value.trim();
+    function formatField(id, value) {
+      return id + value.length.toString().padStart(2, '0') + value;
+    }
 
-      if (!nome || !cpf) {
-        alert('Por favor, preencha nome e CPF.');
+    function crc16(str) {
+      let crc = 0xFFFF;
+      for (let i = 0; i < str.length; i++) {
+        crc ^= str.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) {
+          if ((crc & 0x8000) !== 0) {
+            crc = (crc << 1) ^ 0x1021;
+          } else {
+            crc <<= 1;
+          }
+          crc &= 0xFFFF;
+        }
+      }
+      return crc.toString(16).padStart(4, '0');
+    }
+
+    function mascaraTelefone(input) {
+      let v = input.value.replace(/\D/g, '');
+      if (v.length > 11) v = v.slice(0, 11);
+      v = v.replace(/^(\d{2})(\d)/g, '($1) $2');       // Coloca parênteses no DDD
+      v = v.replace(/(\d{5})(\d)/, '$1-$2');           // Coloca hífen após 5 dígitos
+      input.value = v;
+    }
+
+    async function gerarQRCode() {
+      const nomeInput = document.getElementById('nome').value.trim();
+      const telefoneInput = document.getElementById('telefone').value.trim();
+
+      if (!nomeInput || !telefoneInput) {
+        alert('Por favor, preencha nome e telefone.');
         return;
       }
 
-      const payload = `00020126360014BR.GOV.BCB.PIX01${cpf.length}${cpf}5204000053039865802BR5920${nome}6009SAO PAULO62070503***`;
+      // Remove máscara para usar somente números no TXID (ou pode usar o telefone com formatação? Recomendo só números)
+      const telefoneNumeros = telefoneInput.replace(/\D/g, '');
 
-      // Mostrar QR Code
+      // Dados fixos
+      const chavePix = '+5517991839925';
+      const cidade = 'TABAPUA';
+      const nomeRecebedor = 'BRUNO CESAR DE ANDRADE';
+      const valor = '20.00';
+
+      const merchantAccount = formatField('01', chavePix);
+      const merchantInfo = formatField('26', formatField('00', 'BR.GOV.BCB.PIX') + merchantAccount);
+
+      // Use nome + telefone para txid para garantir unicidade (limitar a 25 caracteres)
+      const txidRaw = (telefoneNumeros).toUpperCase().substring(0, 25).trim();
+      const additionalData = formatField('05', txidRaw);
+
+      const payloadSemCRC =
+        '000201' +
+        merchantInfo +
+        '52040000' +
+        '5303986' +
+        formatField('54', valor) +
+        '5802BR' +
+        formatField('59', nomeRecebedor) +
+        formatField('60', cidade) +
+        formatField('62', additionalData) +
+        '6304';
+
+      const crc = crc16(payloadSemCRC).toUpperCase();
+      const payloadFinal = payloadSemCRC + crc;
+
+      // Mostra QR Code
       document.getElementById('qrcode').innerHTML = '';
       new QRCode(document.getElementById('qrcode'), {
-        text: payload,
+        text: payloadFinal,
         width: 256,
         height: 256,
       });
 
-      // Mostrar copia e cola
-      document.getElementById('pix-copia').value = payload;
+      // Mostra Copia e Cola
+      document.getElementById('pix-copia').value = payloadFinal;
       document.getElementById('pix-area').classList.remove('hidden');
       document.getElementById('copiado').classList.add('hidden');
 
-      // Enviar para SheetDB
+      // Envia para SheetDB
       const url = 'https://sheetdb.io/api/v1/u0jv8qd1z8ptz';
       const data = {
         data: [{
-          nome: nome,
-          cpf: cpf,
+          nome: nomeInput,
+          telefone: telefoneInput,
           data: new Date().toLocaleString("pt-BR")
         }]
       };
