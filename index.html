@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code PIX + Registro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center text-indigo-600 mb-6">Gerador de QR Code PIX</h1>
+
+    <label class="block font-medium mb-1">Nome:</label>
+    <input id="nome" type="text" class="w-full p-2 border rounded mb-4" placeholder="Seu nome completo">
+
+    <label class="block font-medium mb-1">CPF (chave PIX):</label>
+    <input id="cpf" type="text" class="w-full p-2 border rounded mb-4" placeholder="000.000.000-00">
+
+    <button onclick="gerarQRCode()" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
+      Gerar QR Code PIX
+    </button>
+
+    <div id="qrcode" class="mt-6 flex justify-center"></div>
+
+    <div id="pix-area" class="mt-4 hidden">
+      <label class="block font-medium mb-1 text-sm text-gray-700">PIX Copia e Cola:</label>
+      <textarea id="pix-copia" readonly class="w-full p-2 border rounded text-sm mb-2 h-24 resize-none"></textarea>
+      <button onclick="copiarPix()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+        Copiar Código PIX
+      </button>
+      <div id="copiado" class="text-sm text-green-600 text-center mt-1 hidden">Código copiado com sucesso!</div>
+    </div>
+
+    <div id="status" class="text-sm text-center text-green-600 mt-4 hidden">Dados salvos com sucesso!</div>
+  </div>
+
+  <script>
+    async function gerarQRCode() {
+      const nome = document.getElementById('nome').value.trim();
+      const cpf = document.getElementById('cpf').value.trim();
+
+      if (!nome || !cpf) {
+        alert('Por favor, preencha nome e CPF.');
+        return;
+      }
+
+      const payload = `00020126360014BR.GOV.BCB.PIX01${cpf.length}${cpf}5204000053039865802BR5920${nome}6009SAO PAULO62070503***`;
+
+      // Mostrar o QR Code
+      document.getElementById('qrcode').innerHTML = '';
+      new QRCode(document.getElementById('qrcode'), {
+        text: payload,
+        width: 256,
+        height: 256,
+      });
+
+      // Mostrar código copia e cola
+      document.getElementById('pix-copia').value = payload;
+      document.getElementById('pix-area').classList.remove('hidden');
+      document.getElementById('copiado').classList.add('hidden');
+
+      // Enviar para planilha via SheetDB
+      const url = 'https://sheetdb.io/api/v1/u0jv8qd1z8ptz'; // Substitua aqui
+      const data = {
+        data: [{
+          nome: nome,
+          cpf: cpf,
+          data: new Date().toLocaleString("pt-BR")
+        }]
+      };
+
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+          document.getElementById('status').classList.remove('hidden');
+        } else {
+          alert('Erro ao salvar dados.');
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Erro de conexão com planilha.');
+      }
+    }
+
+    function copiarPix() {
+      const pixTexto = document.getElementById('pix-copia');
+      pixTexto.select();
+      pixTexto.setSelectionRange(0, 99999); // Compatível com mobile
+      document.execCommand('copy');
+
+      document.getElementById('copiado').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
