@@ -2,35 +2,45 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>QR Code PIX + Registro</title>
+  <title>Lista de Interesse - Retiro ADMC 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-  <div class="bg-white shadow-lg rounded-xl p-6 w-full max-w-md">
-    <h1 class="text-2xl font-bold text-center text-indigo-600 mb-6">Gerador de QR Code PIX</h1>
+  <div class="bg-white shadow-lg rounded-xl p-4 sm:p-6 w-full max-w-md">
+    
+    <!-- Título -->
+    <div class="text-xl sm:text-2xl font-bold text-center text-indigo-600 mb-4">
+      <div>Cadastro de Interesse</div>
+      <div class="mt-1">Retiro ADMC 2026</div>
+    </div>
 
-    <label class="block font-medium mb-1">Nome:</label>
-    <input id="nome" type="text" class="w-full p-2 border rounded mb-4" placeholder="Seu nome completo">
+    <!-- Formulário -->
+    <label class="block text-sm font-medium mb-1">Nome:</label>
+    <input id="nome" type="text" class="w-full p-2 border rounded mb-4 text-sm" placeholder="Seu nome completo">
 
-    <label class="block font-medium mb-1">CPF (chave PIX):</label>
-    <input id="cpf" type="text" class="w-full p-2 border rounded mb-4" placeholder="000.000.000-00">
+    <label class="block text-sm font-medium mb-1">CPF (chave PIX):</label>
+    <input id="cpf" type="text" class="w-full p-2 border rounded mb-4 text-sm" placeholder="000.000.000-00">
 
-    <button onclick="gerarQRCode()" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
+    <button onclick="gerarQRCode()" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 text-sm font-semibold">
       Gerar QR Code PIX
     </button>
 
+    <!-- QR Code -->
     <div id="qrcode" class="mt-6 flex justify-center"></div>
 
+    <!-- PIX Copia e Cola -->
     <div id="pix-area" class="mt-4 hidden">
       <label class="block font-medium mb-1 text-sm text-gray-700">PIX Copia e Cola:</label>
-      <textarea id="pix-copia" readonly class="w-full p-2 border rounded text-sm mb-2 h-24 resize-none"></textarea>
-      <button onclick="copiarPix()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
+      <textarea id="pix-copia" readonly class="w-full p-2 border rounded text-sm mb-2 resize-none" rows="4"></textarea>
+      <button onclick="copiarPix()" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 text-sm font-semibold">
         Copiar Código PIX
       </button>
       <div id="copiado" class="text-sm text-green-600 text-center mt-1 hidden">Código copiado com sucesso!</div>
     </div>
 
+    <!-- Status -->
     <div id="status" class="text-sm text-center text-green-600 mt-4 hidden">Dados salvos com sucesso!</div>
   </div>
 
@@ -46,7 +56,7 @@
 
       const payload = `00020126360014BR.GOV.BCB.PIX01${cpf.length}${cpf}5204000053039865802BR5920${nome}6009SAO PAULO62070503***`;
 
-      // Mostrar o QR Code
+      // Mostrar QR Code
       document.getElementById('qrcode').innerHTML = '';
       new QRCode(document.getElementById('qrcode'), {
         text: payload,
@@ -54,13 +64,13 @@
         height: 256,
       });
 
-      // Mostrar código copia e cola
+      // Mostrar copia e cola
       document.getElementById('pix-copia').value = payload;
       document.getElementById('pix-area').classList.remove('hidden');
       document.getElementById('copiado').classList.add('hidden');
 
-      // Enviar para planilha via SheetDB
-      const url = 'https://sheetdb.io/api/v1/u0jv8qd1z8ptz'; // Substitua aqui
+      // Enviar para SheetDB
+      const url = 'https://sheetdb.io/api/v1/u0jv8qd1z8ptz';
       const data = {
         data: [{
           nome: nome,
@@ -90,9 +100,8 @@
     function copiarPix() {
       const pixTexto = document.getElementById('pix-copia');
       pixTexto.select();
-      pixTexto.setSelectionRange(0, 99999); // Compatível com mobile
+      pixTexto.setSelectionRange(0, 99999);
       document.execCommand('copy');
-
       document.getElementById('copiado').classList.remove('hidden');
     }
   </script>
